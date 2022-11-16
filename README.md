@@ -1,1 +1,1 @@
-# AlexNet_Quantization
+# AlexNet Quantization
