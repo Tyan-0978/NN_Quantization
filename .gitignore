@@ -1,0 +1,9 @@
+# saved models
+models/
+
+# data
+data/
+
+# vim swap files
+*.swp
+*.swo
