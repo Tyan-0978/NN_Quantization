@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-from torchvision import datasets, transforms
+from torchvision import datasets, transforms, models
 
 import time 
 import copy
@@ -259,5 +259,8 @@ def set_random_seeds(random_seed=0):
 # create AlextNet model (default pretrained)
 # --------------------------------------------------------------------
 def create_alexnet_model(is_pretrained=True):
-  model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=is_pretrained)
+  model = torch.hub.load(
+    'pytorch/vision:v0.10.0', 
+    'alexnet', 
+    weights=models.AlexNet_Weights.IMAGENET1K_V1)
   return model
