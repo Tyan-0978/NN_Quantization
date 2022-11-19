@@ -4,6 +4,9 @@ models/
 # data
 data/
 
+# Python cache
+__pycache__/
+
 # vim swap files
 *.swp
 *.swo
