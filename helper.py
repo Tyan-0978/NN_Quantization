@@ -147,9 +147,9 @@ def evaluate_model(model, test_loader, device, criterion=None):
     else:
       loss = 0
 
-  # statistics
-  running_loss += loss * inputs.size(0)
-  running_corrects += torch.sum(preds == labels.data)
+    # statistics
+    running_loss += loss * inputs.size(0)
+    running_corrects += torch.sum(preds == labels.data)
 
   eval_loss = running_loss / len(test_loader.dataset)
   eval_accuracy = running_corrects / len(test_loader.dataset)
