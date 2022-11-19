@@ -72,9 +72,8 @@ def prepare_cifar10_dataloader(num_workers=0, train_batch_size=128, eval_batch_s
 # --------------------------------------------------------------------
 # train model
 # --------------------------------------------------------------------
-def train_model(model, train_loader, test_loader, device):
+def train_model(model, train_loader, test_loader, num_epochs, device):
   learning_rate = 0.001
-  num_epochs = 10
   criterion = nn.CrossEntropyLoss()
   model.to(device)
   optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-5)
