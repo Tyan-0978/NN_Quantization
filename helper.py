@@ -159,7 +159,8 @@ def evaluate_model(model, test_loader, device, criterion=None):
 # model calibration for collecting quantization data statistics
 # --------------------------------------------------------------------
 def calibrate_model(model, loader):
-  model.to(torch.device('cpu')) # gpu is not supported for quantization
+  device = torch.device('cpu') # gpu is not supported for quantization
+  model.to(device)
   model.eval()
 
   for inputs, labels in tqdm(loader):
