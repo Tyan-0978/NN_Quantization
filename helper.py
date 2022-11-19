@@ -67,7 +67,63 @@ def prepare_cifar10_dataloader(num_workers=0, train_batch_size=128, eval_batch_s
     num_workers=num_workers
   )
 
-return train_loader, test_loader
+  return train_loader, test_loader
+
+# --------------------------------------------------------------------
+# train model
+# --------------------------------------------------------------------
+def train_model(model, train_loader, test_loader, device):
+  learning_rate = 0.001
+  num_epochs = 10
+  criterion = nn.CrossEntropyLoss()
+  model.to(device)
+  optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-5)
+
+  for epoch in range(num_epochs):
+    # Training
+    model.train()
+
+    running_loss = 0
+    running_corrects = 0
+
+    for inputs, labels in tqdm(train_loader):
+
+      inputs = inputs.to(device)
+      labels = labels.to(device)
+
+      # zero the parameter gradients
+      optimizer.zero_grad()
+
+      # forward + backward + optimize
+      outputs = model(inputs)
+      _, preds = torch.max(outputs, 1)
+      loss = criterion(outputs, labels)
+      loss.backward()
+      optimizer.step()
+
+      # statistics
+      running_loss += loss.item() * inputs.size(0)
+      running_corrects += torch.sum(preds == labels.data)
+
+    train_loss = running_loss / len(train_loader.dataset)
+    train_accuracy = running_corrects / len(train_loader.dataset)
+
+    # Evaluation
+    model.eval()
+    eval_loss, eval_accuracy = evaluate_model(
+      model=model, 
+      test_loader=test_loader, 
+      device=device, 
+      criterion=criterion
+    )
+
+    print(
+      "Epoch: {:02d} Train Loss: {:.3f} Train Acc: {:.3f} Eval Loss: {:.3f} Eval Acc: {:.3f}".format(
+        epoch, train_loss, train_accuracy, eval_loss, eval_accuracy
+      )
+    )
+
+  return
 
 # --------------------------------------------------------------------
 # evaluate model loss and accuracy
@@ -123,30 +179,30 @@ def measure_inference_latency(
   num_warmups=10
 ):
 
-model.to(device)
-model.eval()
+  model.to(device)
+  model.eval()
 
-x = torch.rand(size=input_size).to(device)
+  x = torch.rand(size=input_size).to(device)
 
-with torch.no_grad():
-  for _ in range(num_warmups):
-  _ = model(x)
-  # uncomment line below if cuda is available
-  #torch.cuda.synchronize()
+  with torch.no_grad():
+    for _ in range(num_warmups):
+      _ = model(x)
+      # uncomment line below if cuda is available
+      #torch.cuda.synchronize()
 
-with torch.no_grad():
-  start_time = time.time()
-  for _ in tqdm(range(num_samples)):
-  _ = model(x)
-  # uncomment line below if cuda is available
-  #torch.cuda.synchronize()
+  with torch.no_grad():
+    start_time = time.time()
+    for _ in tqdm(range(num_samples)):
+      _ = model(x)
+      # uncomment line below if cuda is available
+      #torch.cuda.synchronize()
 
-  end_time = time.time()
+    end_time = time.time()
 
-elapsed_time = end_time - start_time
-elapsed_time_ave = elapsed_time / num_samples
+  elapsed_time = end_time - start_time
+  elapsed_time_ave = elapsed_time / num_samples
 
-return elapsed_time_ave
+  return elapsed_time_ave
 
 # --------------------------------------------------------------------
 # save / load models
