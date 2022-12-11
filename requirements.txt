@@ -1,0 +1,4 @@
+# required modules for AlexNet quantization
+torch
+torchvision
+tqdm
