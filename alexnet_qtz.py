@@ -75,23 +75,17 @@ print('')
 print('Starting quantization ...')
 quantized_model = QuantizedModel(model_fp32=fused_model)
 
-# Select quantization schemes from 
-# https://pytorch.org/docs/stable/quantization-support.html
-#quantization_config = torch.quantization.get_default_qconfig("fbgemm")
-# Custom quantization configurations
 '''
 default_quantization_config = torch.quantization.default_qconfig
 quantized_model.qconfig = default_quantization_config
 '''
-act_config = torch.quantization.MinMaxObserver.with_args(
-  #qscheme=torch.per_tensor_symmetric,
-  dtype=torch.quint8
+act_config = torch.quantization.HistogramObserver.with_args(
+  dtype=torch.quint8,
+  qscheme=torch.per_tensor_symmetric,
 )
 weight_config = torch.quantization.MinMaxObserver.with_args(
+  dtype=torch.qint8,
   qscheme=torch.per_tensor_symmetric,
-  quant_min=-8,
-  quant_max=7,
-  dtype=torch.qint8
 )
 
 quantization_config = torch.quantization.QConfig(
@@ -114,11 +108,20 @@ print('Calibration finished')
 quantized_model = torch.quantization.convert(quantized_model, inplace=True)
 quantized_model.eval()
 print('Quantization finished')
+print('')
 
 # save quantized model
-qtz_model_filename = 'alexnet_cifar10_qtz_jit_weight_-8_7.pt'
-qtz_model_filepath = os.path.join(model_dir, qtz_model_filename)
-#helper.save_model(quantized_model, qtz_model_filepath)
-helper.save_torchscript_model(quantized_model, qtz_model_filepath)
-print(f'Quantization model saved to {qtz_model_filepath}')
+res = input('Save model? (y/n): ')
+while res not in ['', 'y', 'n']:
+  res = input('Unknown response. Save model? (y/n): ')
+if res == 'n':
+  print('Model not saved. Program is ended.')
+else:
+  qtz_model_filename = input('Insert file name: ')
+  if not qtz_model_filename: os.exit
+  qtz_model_filepath = os.path.join(model_dir, qtz_model_filename)
+  #helper.save_model(quantized_model, qtz_model_filepath)
+  helper.save_torchscript_model(quantized_model, qtz_model_filepath)
+  print(f'Quantization model saved to {qtz_model_filepath}')
+
 print('')

@@ -25,7 +25,7 @@ print('')
 model_dir = './models/'
 fp32_model_filename = 'alexnet_cifar10.pt'
 fp32_model_filepath = os.path.join(model_dir, fp32_model_filename) 
-qtz_model_filename = 'alexnet_cifar10_qtz_jit_weight_-8_7.pt'
+qtz_model_filename = 'alexnet_qtz_act_histogram.pt'
 qtz_model_filepath = os.path.join(model_dir, qtz_model_filename) 
 
 print(f'Loading FP32 model from {fp32_model_filepath} ...')
