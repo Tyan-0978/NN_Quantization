@@ -146,9 +146,9 @@ def calibrate_model(model, loader):
   model.to(device)
   model.eval()
 
-  for inputs, labels in tqdm(loader):
+  for inputs, _ in tqdm(loader, desc='Calibrating: '):
     inputs = inputs.to(device)
-    labels = labels.to(device)
+    #labels = labels.to(device)
     _ = model(inputs)
 
 # --------------------------------------------------------------------

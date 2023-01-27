@@ -28,9 +28,18 @@ fp32_model_filepath = os.path.join(model_dir, fp32_model_filename)
 helper.set_random_seeds(random_seed=random_seed)
 
 print('Loading dataset ...')
-train_loader, test_loader = helper.prepare_cifar10_dataloader(
-  num_workers=8, train_batch_size=128, eval_batch_size=256
-)
+
+# transform for AlexNet
+mean, std_dev = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
+transform = transforms.Compose([
+  transforms.Resize(256),
+  transforms.CenterCrop(224),
+  transforms.ToTensor(),
+  transforms.Normalize(mean, std_dev)
+])
+
+train_loader, test_loader = helper.prepare_cifar10_dataloader(data_transform=transform)
+
 print('Done')
 print('')
 
@@ -108,6 +117,17 @@ print('Calibration finished')
 quantized_model = torch.quantization.convert(quantized_model, inplace=True)
 quantized_model.eval()
 print('Quantization finished')
+print('')
+
+print('Start evaluation ...')
+
+_, eval_accuracy = helper.evaluate_model(
+  model=quantized_model,
+  test_loader=test_loader,
+  device=device,
+)
+
+print(f'Model accuracy: {eval_accuracy}')
 print('')
 
 # save quantized model
