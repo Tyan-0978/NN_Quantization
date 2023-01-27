@@ -51,6 +51,7 @@ fp32_model.to(cpu_device)
 print('Done')
 print('')
 
+'''
 # model fusion -------------------------------------------------------
 print('Fusing FP32 Model ...')
 fused_model = copy.deepcopy(fp32_model)
@@ -79,10 +80,11 @@ assert helper.model_equivalence(
 ), "Fused model is not equivalent to the original model!"
 print('Model equivalence test passed')
 print('')
+'''
 
 # quantization -------------------------------------------------------
 print('Starting quantization ...')
-quantized_model = QuantizedModel(model_fp32=fused_model)
+quantized_model = QuantizedModel(model_fp32=fp32_model)
 
 '''
 default_quantization_config = torch.quantization.default_qconfig
@@ -124,7 +126,7 @@ print('Start evaluation ...')
 _, eval_accuracy = helper.evaluate_model(
   model=quantized_model,
   test_loader=test_loader,
-  device=device,
+  device=cpu_device,
 )
 
 print(f'Model accuracy: {eval_accuracy}')
