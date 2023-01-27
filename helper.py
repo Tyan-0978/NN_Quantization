@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Helper Functions for AlexNet Quantization
+# Helper Functions for Quantization
 # ------------------------------------------------------------------------------
 
 import os
@@ -9,7 +9,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-from torchvision import datasets, transforms, models
+from torchvision import models
+from torchvision.datasets import CIFAR10
+from torchvision.models import vgg16, VGG16_Weights
 
 import time 
 import copy
@@ -19,36 +21,13 @@ from tqdm.auto import tqdm
 # --------------------------------------------------------------------
 # prepare CIFAR10 data loader
 # --------------------------------------------------------------------
-def prepare_cifar10_dataloader(num_workers=0, train_batch_size=128, eval_batch_size=256):
-  mean = [0.485, 0.456, 0.406]
-  std = [0.229, 0.224, 0.225]
+def prepare_cifar10_dataloader(
+  data_transform, num_workers=0, 
+  train_batch_size=128, eval_batch_size=256
+):
 
-  train_transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean, std),
-  ])
-
-  test_transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean, std),
-  ])
-
-  train_set = torchvision.datasets.CIFAR10(
-    root="data", 
-    train=True, 
-    download=True, 
-    transform=train_transform
-  ) 
-  test_set = torchvision.datasets.CIFAR10(
-    root="data", 
-    train=False, 
-    download=True, 
-    transform=test_transform
-  )
+  train_set = CIFAR10(root="data", train=True, download=True, transform=data_transform) 
+  test_set = CIFAR10(root="data", train=False, download=True, transform=data_transform)
 
   train_sampler = torch.utils.data.RandomSampler(train_set)
   test_sampler = torch.utils.data.SequentialSampler(test_set)
@@ -85,7 +64,7 @@ def train_model(model, train_loader, test_loader, num_epochs, device):
     running_loss = 0
     running_corrects = 0
 
-    for inputs, labels in tqdm(train_loader):
+    for inputs, labels in tqdm(train_loader, desc='Training: '):
 
       inputs = inputs.to(device)
       labels = labels.to(device)
@@ -134,7 +113,7 @@ def evaluate_model(model, test_loader, device, criterion=None):
   running_loss = 0
   running_corrects = 0
 
-  for inputs, labels in tqdm(test_loader):
+  for inputs, labels in tqdm(test_loader, desc='Evaluating: '):
     inputs = inputs.to(device)
     labels = labels.to(device)
 
@@ -154,6 +133,10 @@ def evaluate_model(model, test_loader, device, criterion=None):
   eval_accuracy = running_corrects / len(test_loader.dataset)
 
   return eval_loss, eval_accuracy
+
+def evaluate_model_topk(model, test_loader, device, criterion=None):
+  # TODO
+  return
 
 # --------------------------------------------------------------------
 # model calibration for collecting quantization data statistics
@@ -259,8 +242,24 @@ def set_random_seeds(random_seed=0):
 # create AlextNet model (default pretrained)
 # --------------------------------------------------------------------
 def create_alexnet_model(is_pretrained=True):
-  model = torch.hub.load(
-    'pytorch/vision:v0.10.0', 
-    'alexnet', 
-    weights=models.AlexNet_Weights.IMAGENET1K_V1)
+  if is_pretrained:
+    weights = AlexNet_Weights.IMAGENET1K_V1
+  else:
+    weights = None
+
+  model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', weights=weights)
+
+  return model
+
+# --------------------------------------------------------------------
+# create VGG16 model 
+# --------------------------------------------------------------------
+def create_vgg16_model(is_pretrained=True):
+  if is_pretrained:
+    weights = VGG16_Weights.IMAGENET1K_V1
+  else:
+    weights = None
+
+  model = vgg16(weights=weights)
+
   return model
