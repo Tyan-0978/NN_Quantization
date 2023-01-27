@@ -1,6 +1,6 @@
-# AlexNet Quantization
+# Neural Network Quantization
 
-Google Colab notebook: https://colab.research.google.com/drive/1ulFUy6sP2M20fw2MsIms9DtZD9DcE4Yl?usp=sharing
+AlexNet quantization (notebook version): https://colab.research.google.com/drive/1ulFUy6sP2M20fw2MsIms9DtZD9DcE4Yl?usp=sharing
 
 ## References
 
