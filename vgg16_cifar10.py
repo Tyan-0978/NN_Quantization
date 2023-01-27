@@ -49,7 +49,7 @@ print(f'Current device: {device}')
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-# train and evaluate AlexNet with CIFAR10 -----------------------------------------
+# train and evaluate VGG16 with CIFAR10 -----------------------------------------
 print('Start training ...')
 
 num_epochs = 1
@@ -110,14 +110,16 @@ avg = avg / 10
 print(f'Average accuracy = {avg}\n')
 
 # save model ---------------------------------------------------------
+save_model = False
 model_dir = './models/'
 model_name = 'vgg16_cifar10.pt'
 model_path = os.path.join(model_dir, model_name)
 if not os.path.exists(model_dir):
   os.makedirs(model_dir)
 
-helper.save_model(model, model_path)
-print(f'Model saved at {model_path}')
-print('')
+if save_model:
+  helper.save_model(model, model_path)
+  print(f'Model saved at {model_path}')
+  print('')
 
 print('End of the program.\n')
