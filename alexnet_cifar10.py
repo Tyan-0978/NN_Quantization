@@ -5,10 +5,11 @@
 import os
 import torch
 import torchvision
-from torchvision import transforms
 from tqdm.auto import tqdm
 
-import helper
+from utils import helper, datasets, alexnet_utils
+
+print('=== Start AlexNet training on CIFAR10 ===')
 
 random_seed = 0
 helper.set_random_seeds(random_seed=random_seed)
@@ -16,55 +17,54 @@ helper.set_random_seeds(random_seed=random_seed)
 # prepare CIFAR10 dataset --------------------------------------------
 print('Preparing CIFAR10 dataset ...')
 
-batch_size = 4
+train_batch_size = 4
+eval_batch_size = 1
+transform = alexnet_utils.use_alexnet_transform()
 
-# transform for AlexNet
-mean, std_dev = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
-transform = transforms.Compose([
-  transforms.Resize(256),
-  transforms.CenterCrop(224),
-  transforms.ToTensor(),
-  transforms.Normalize(mean, std_dev)
-])
-
-train_loader, test_loader = helper.prepare_cifar10_dataloader(
+train_loader, test_loader = datasets.prepare_cifar10_loaders(
   data_transform=transform,
-  train_batch_size=batch_size,
-  eval_batch_size=batch_size
+  train_batch_size=train_batch_size, 
+  eval_batch_size=eval_batch_size
 )
 
 print('Done')
 print('')
 
 
-# create pretrained AlexNet model ------------------------------------
-# last layer output size is modified to 10 for CIFAR10
-print('Creating pre-trained AlexNet ...')
+# create pretrained AlexNet model ----------------------------------------------
+print('Creating AlexNet model for CIFAR10 ...')
 
-model = helper.create_alexnet_model()
+model = alexnet_utils.create_alexnet_model()
+
+# modify FC layers for CIFAR10 (output 10 classes)
 model.classifier[4] = torch.nn.Linear(4096,1024)
 model.classifier[6] = torch.nn.Linear(1024,10)
 model.eval()
+print(model)
 
 print('Done')
 print('')
 
+# use GPU for faster training (if available)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Current device: {device}')
 
+learning_rate = 0.001
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
 
 # train and evaluate AlexNet with CIFAR10 -----------------------------------------
-print('Start training ...')
+print('Start training (this will take a while) ...')
 
 num_epochs = 1
+learning_rate = 0.001
 
 helper.train_model(
   model=model, 
   train_loader=train_loader, 
   test_loader=test_loader, 
   num_epochs=num_epochs,
+  lr=learning_rate,
   device=device
 )
 
@@ -82,6 +82,7 @@ _, eval_accuracy = helper.evaluate_model(
 print(f'Model accuracy: {eval_accuracy}')
 print('')
 
+'''
 # test for all classes
 print('Testing for all classes ...')
 
@@ -92,7 +93,7 @@ class_correct = [0.] * 10
 class_total = [0.] * 10
 
 with torch.no_grad():
-  for data in tqdm(test_loader):
+  for data in tqdm(test_loader, desc='Testing: '):
     images, labels = data[0].to(device), data[1].to(device)
     outputs = model(images)
     _, predicted = torch.max(outputs, 1)
@@ -114,11 +115,12 @@ for i in range(10):
 avg = avg / 10
 
 print(f'Average accuracy = {avg}\n')
+'''
 
 # save model ---------------------------------------------------------
 save_model = False
 model_dir = './models/'
-model_name = 'alexnet_cifar10.pt'
+model_name = f'alexnet_cifar10_{int(eval_accuracy * 100)}.pt'
 model_path = os.path.join(model_dir, model_name)
 if not os.path.exists(model_dir):
   os.makedirs(model_dir)
@@ -127,5 +129,3 @@ if save_model:
   helper.save_model(model, model_path)
   print(f'Model saved at {model_path}')
   print('')
-
-print('End of the program\n')
