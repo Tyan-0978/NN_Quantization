@@ -49,10 +49,6 @@ print('')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Current device: {device}')
 
-learning_rate = 0.001
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
-
 # train and evaluate AlexNet with CIFAR10 -----------------------------------------
 print('Start training (this will take a while) ...')
 
@@ -73,7 +69,7 @@ print('')
 
 print('Start evaluation ...')
 
-_, eval_accuracy = helper.evaluate_model(
+_, eval_accuracy = helper.evaluate_model_topk(
   model=model, 
   test_loader=test_loader, 
   device=device,
