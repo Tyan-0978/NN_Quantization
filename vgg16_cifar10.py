@@ -9,7 +9,7 @@ from torchvision import transforms
 from torchvision.models import VGG16_Weights
 from tqdm.auto import tqdm
 
-import helper
+from utils import helper, datasets, vgg16_utils
 
 random_seed = 0
 helper.set_random_seeds(random_seed=random_seed)
@@ -17,57 +17,53 @@ helper.set_random_seeds(random_seed=random_seed)
 # prepare CIFAR10 dataset --------------------------------------------
 print('Preparing CIFAR10 dataset ...')
 
-batch_size = 4
+train_batch_size = 10
+eval_batch_size = 1
+transform = vgg16_utils.use_vgg16_transform()
 
-# transform for VGG16
-transform = VGG16_Weights.IMAGENET1K_V1.transforms()
-
-train_loader, test_loader = helper.prepare_cifar10_dataloader(
+train_loader, test_loader = datasets.prepare_cifar10_loaders(
   data_transform=transform,
-  train_batch_size=batch_size, eval_batch_size=batch_size
+  train_batch_size=train_batch_size, 
+  eval_batch_size=eval_batch_size
 )
 
-print('Done')
-print('')
-
+print('Done\n')
 
 # create pretrained VGG16 model --------------------------------------
-# last layer output size is modified to 10 for CIFAR10
-print('Creating pre-trained VGG16 ...')
+print('Creating VGG16 model for CIFAR10 ...')
 
-model = helper.create_vgg16_model()
+model = vgg16_utils.create_vgg16_model()
+
+# last layer output size is modified for CIFAR10 (10 classes)
 model.classifier[3] = torch.nn.Linear(4096,1024)
 model.classifier[6] = torch.nn.Linear(1024,10)
-model.eval()
+print(model)
 
-print('Done')
-print('')
+print('Done\n')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Current device: {device}')
-
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # train and evaluate VGG16 with CIFAR10 -----------------------------------------
 print('Start training ...')
 
 num_epochs = 1
+learning_rate = 0.001
 
 helper.train_model(
   model=model, 
   train_loader=train_loader, 
   test_loader=test_loader, 
   num_epochs=num_epochs,
+  lr=learning_rate,
   device=device
 )
 
-print('Finish training.')
-print('')
+print('Finish training.\n')
 
 print('Start evaluation ...')
 
-_, eval_accuracy = helper.evaluate_model(
+_, eval_accuracy = helper.evaluate_model_topk(
   model=model, 
   test_loader=test_loader, 
   device=device,
@@ -76,6 +72,7 @@ _, eval_accuracy = helper.evaluate_model(
 print(f'Model accuracy: {eval_accuracy}')
 print('')
 
+'''
 # test for all classes
 print('Testing for all classes ...')
 
@@ -108,11 +105,13 @@ for i in range(10):
 avg = avg / 10
 
 print(f'Average accuracy = {avg}\n')
+'''
 
 # save model ---------------------------------------------------------
 save_model = False
+model_name = f'vgg16_cifar10_{int(eval_accuracy)}.pt'
+
 model_dir = './models/'
-model_name = 'vgg16_cifar10.pt'
 model_path = os.path.join(model_dir, model_name)
 if not os.path.exists(model_dir):
   os.makedirs(model_dir)
@@ -121,5 +120,3 @@ if save_model:
   helper.save_model(model, model_path)
   print(f'Model saved at {model_path}')
   print('')
-
-print('End of the program.\n')
