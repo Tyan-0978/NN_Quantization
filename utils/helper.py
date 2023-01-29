@@ -9,9 +9,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-from torchvision import models
-from torchvision.datasets import CIFAR10
-from torchvision.models import vgg16, VGG16_Weights
 
 import time 
 import copy
@@ -33,7 +30,7 @@ def train_model(model, train_loader, test_loader, num_epochs, lr=0.001, device=t
     running_loss = 0
     running_corrects = 0
 
-    for inputs, labels in tqdm(train_loader, desc='Training:'):
+    for inputs, labels in tqdm(train_loader, desc='Training'):
 
       inputs = inputs.to(device)
       labels = labels.to(device)
@@ -57,12 +54,13 @@ def train_model(model, train_loader, test_loader, num_epochs, lr=0.001, device=t
 
     # Evaluation
     model.eval()
-    eval_loss, eval_accuracy = evaluate_model(
-      model=model, 
-      test_loader=test_loader, 
-      device=device, 
-      criterion=criterion
-    )
+    with torch.no_grad():
+      eval_loss, eval_accuracy = evaluate_model_topk(
+	model=model, 
+	test_loader=test_loader, 
+	device=device, 
+	criterion=criterion,
+      )
 
     print(
       "Epoch: {:02d} Train Loss: {:.3f} Train Acc: {:.3f} Eval Loss: {:.3f} Eval Acc: {:.3f}".format(
@@ -82,7 +80,7 @@ def evaluate_model(model, test_loader, device, criterion=None):
   running_loss = 0
   running_corrects = 0
 
-  for inputs, labels in tqdm(test_loader, desc='Evaluating:'):
+  for inputs, labels in tqdm(test_loader, desc='Evaluating'):
     inputs = inputs.to(device)
     labels = labels.to(device)
 
@@ -103,8 +101,55 @@ def evaluate_model(model, test_loader, device, criterion=None):
 
   return eval_loss, eval_accuracy
 
-def evaluate_model_topk(model, test_loader, device, criterion=None):
-  # TODO
+def topk_corrects(output, target, topk=(1,)):
+  """Computes the accuracy over the k top predictions for the specified values of k"""
+  with torch.no_grad():
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    results = []
+    for k in topk:
+      correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+      results.append(correct_k.item())
+      #results.append(correct_k.mul_(100.0 / batch_size))
+    return results
+
+def evaluate_model_topk(model, test_loader, device, criterion=None, topk=(1, )):
+  model.eval()
+  model.to(device)
+
+  running_loss = 0
+  running_corrects = torch.zeros(len(topk))
+  running_top1_corrects = 0
+  running_top5_corrects = 0
+
+  for inputs, labels in tqdm(test_loader, desc='Evaluating'):
+    batch_size = inputs.size(0)
+    inputs = inputs.to(device)
+    labels = labels.to(device)
+
+    outputs = model(inputs)
+    topk_acc_list = topk_corrects(outputs, labels, topk=topk)
+
+    if criterion is not None:
+      loss = criterion(outputs, labels).item()
+    else:
+      loss = 0
+
+    # statistics
+    running_loss += loss * inputs.size(0)
+    for i, val in enumerate(topk_acc_list):
+      running_corrects[i] += val
+
+  eval_loss = running_loss / len(test_loader.dataset)
+  eval_topk_accuracy = running_corrects / len(test_loader.dataset)
+
+  return eval_loss, *eval_topk_accuracy.tolist()
+
   return
 
 # --------------------------------------------------------------------
@@ -115,7 +160,7 @@ def calibrate_model(model, loader):
   model.to(device)
   model.eval()
 
-  for inputs, _ in tqdm(loader, desc='Calibrating: '):
+  for inputs, _ in tqdm(loader, desc='Calibrating'):
     inputs = inputs.to(device)
     #labels = labels.to(device)
     _ = model(inputs)
