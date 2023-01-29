@@ -5,49 +5,43 @@
 import os
 import copy
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch.quantization import QConfig, MinMaxObserver, HistogramObserver
 import torchvision
-from torchvision import datasets, transforms
-
-from tqdm.auto import tqdm
-
-import helper
-from QuantizedModel import QuantizedModel
+from utils import helper, datasets, alexnet_utils
+from utils.QuantizedModel import QuantizedModel
 
 # settings -----------------------------------------------------------
 random_seed = 0
-num_classes = 10
-cpu_device = torch.device("cpu")
-# cuda is not supported for quantization
-
-model_dir = './models/'
-fp32_model_filename = 'alexnet_cifar10.pt'
-fp32_model_filepath = os.path.join(model_dir, fp32_model_filename)
-
 helper.set_random_seeds(random_seed=random_seed)
+
+device = torch.device("cpu") # CUDA is not supported for quantization
 
 print('Loading dataset ...')
 
-# transform for AlexNet
-mean, std_dev = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
-transform = transforms.Compose([
-  transforms.Resize(256),
-  transforms.CenterCrop(224),
-  transforms.ToTensor(),
-  transforms.Normalize(mean, std_dev)
-])
+transform = alexnet_utils.use_alexnet_transform()
+train_batch_size = 4
+eval_batch_size = 1
 
-train_loader, test_loader = helper.prepare_cifar10_dataloader(data_transform=transform)
+train_loader, test_loader = datasets.prepare_cifar10_loaders(
+  data_transform=transform,
+  train_batch_size=train_batch_size,
+  eval_batch_size=eval_batch_size
+)
 
 print('Done')
 print('')
 
 # load Alexnet model (pretrained by CIFAR10)
-# pretrained model should be placed at the path printed above
-print(f'Loading FP32 model from {fp32_model_filepath} ...')
-fp32_model = helper.load_model(fp32_model_filepath)
-fp32_model.to(cpu_device)
+model_dir = './models/'
+fp32_model_name = 'alexnet_cifar10.pt'
+fp32_model_path = os.path.join(model_dir, fp32_model_name)
+
+print(f'Loading FP32 model from {fp32_model_path} ...')
+
+fp32_model = helper.load_model(fp32_model_path)
+fp32_model.to(device)
+print(fp32_model)
+
 print('Done')
 print('')
 
@@ -83,67 +77,58 @@ print('')
 '''
 
 # quantization -------------------------------------------------------
-print('Starting quantization ...')
+print('Start quantization ...')
+
 quantized_model = QuantizedModel(model_fp32=fp32_model)
 
 '''
 default_quantization_config = torch.quantization.default_qconfig
 quantized_model.qconfig = default_quantization_config
 '''
-act_config = torch.quantization.HistogramObserver.with_args(
+act_config = HistogramObserver.with_args(
   dtype=torch.quint8,
   qscheme=torch.per_tensor_symmetric,
 )
-weight_config = torch.quantization.MinMaxObserver.with_args(
+weight_config = HistogramObserver.with_args(
   dtype=torch.qint8,
   qscheme=torch.per_tensor_symmetric,
 )
 
-quantization_config = torch.quantization.QConfig(
-  activation=act_config,
-  weight=weight_config
-)
+quantization_config = QConfig(activation=act_config, weight=weight_config)
 quantized_model.qconfig = quantization_config
 
 print('Quantization configurations:')
-print(quantized_model.qconfig)
-print('')
+print(quantized_model.qconfig, '\n')
 
 torch.quantization.prepare(quantized_model, inplace=True)
 
 # Use training data for calibration.
 print('Calibrating quantized model ...')
+
 helper.calibrate_model(model=quantized_model, loader=train_loader)
+
 print('Calibration finished')
 
 quantized_model = torch.quantization.convert(quantized_model, inplace=True)
 quantized_model.eval()
-print('Quantization finished')
-print('')
+
+print('Quantization finished\n')
 
 print('Start evaluation ...')
 
-_, eval_accuracy = helper.evaluate_model(
+_, eval_accuracy = helper.evaluate_model_topk(
   model=quantized_model,
   test_loader=test_loader,
-  device=cpu_device,
+  device=device,
 )
 
-print(f'Model accuracy: {eval_accuracy}')
-print('')
+print(f'Model accuracy: {eval_accuracy}\n')
 
 # save quantized model
-res = input('Save model? (y/n): ')
-while res not in ['', 'y', 'n']:
-  res = input('Unknown response. Save model? (y/n): ')
-if res == 'n':
-  print('Model not saved. Program is ended.')
-else:
-  qtz_model_filename = input('Insert file name: ')
-  if not qtz_model_filename: os.exit
-  qtz_model_filepath = os.path.join(model_dir, qtz_model_filename)
-  #helper.save_model(quantized_model, qtz_model_filepath)
-  helper.save_torchscript_model(quantized_model, qtz_model_filepath)
-  print(f'Quantization model saved to {qtz_model_filepath}')
+save_model = False
+qtz_model_name = f'alexnet_cifar10_qtz_histogram.pt'
 
-print('')
+if save_model:
+  qtz_model_path = os.path.join(model_dir, qtz_model_name)
+  helper.save_torchscript_model(quantized_model, qtz_model_path)
+  print(f'Quantization model saved to {qtz_model_path}')
