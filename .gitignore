@@ -4,6 +4,9 @@ models/
 # data
 data/
 
+# test files
+_test*
+
 # Python cache
 __pycache__/
 
