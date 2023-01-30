@@ -32,3 +32,13 @@ def prepare_cifar100_loaders(data_transform, train_batch_size=1, eval_batch_size
   test_loader = DataLoader(dataset=test_set, batch_size=eval_batch_size, sampler=test_sampler)
 
   return train_loader, test_loader
+
+def prepare_imagenet_loaders(data_transform, train_batch_size=1, eval_batch_size=1):
+  # TODO: train loader
+  train_loader = None
+
+  test_set = datasets.ImageNet(root="./data", split='val', transform=data_transform)
+  test_sampler = SequentialSampler(test_set)
+  test_loader = DataLoader(dataset=test_set, batch_size=eval_batch_size, sampler=test_sampler)
+
+  return train_loader, test_loader
