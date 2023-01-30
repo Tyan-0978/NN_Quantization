@@ -50,36 +50,37 @@ print('')
 # test accuracy ------------------------------------------------------
 print('Evaluating quantized model ...')
 
-topk = (1, )
+topk = (1, 5)
 
-_, qtz_eval_acc = helper.evaluate_model_topk(
+_, int8_top1_acc, int8_top5_acc = helper.evaluate_model_topk(
   model=qtz_model, 
   test_loader=test_loader, 
   device=qtz_device, 
   topk=topk
 )
-print('Done')
 
 print('Evaluating FP32 model ...')
-_, fp32_eval_acc = helper.evaluate_model_topk(
+_, fp32_top1_acc, fp32_top5_acc = helper.evaluate_model_topk(
   model=fp32_model, 
   test_loader=test_loader, 
   device=device, 
   topk=topk
 )
-print('Done')
 
-print("FP32 evaluation accuracy: {:.5f}".format(fp32_eval_acc))
-print("INT8 evaluation accuracy: {:.5f}".format(qtz_eval_acc))
+print(f'FP32: {fp32_top1_acc:.5f} (top 1) / {fp32_top5_acc:.5f} (top 5)')
+print(f'INT8: {int8_top1_acc:.5f} (top 1) / {int8_top5_acc:.5f} (top 5)')
 
 # measure latency ----------------------------------------------------
 print('Measuring inference latency ...')
 
+inf_size = (10, 3, 256, 256)
+num_samples = 100
+
 fp32_inf_latency = helper.measure_inference_latency(
   model=fp32_model, 
-  device=device, 
-  input_size=(10,3,256,256), 
-  num_samples=50
+  device=qtz_device, 
+  input_size=inf_size,
+  num_samples=num_samples
 )
 
 print(f'FP32 CPU inference latency: {(fp32_inf_latency * 1000):.3f} ms / sample')
@@ -87,7 +88,7 @@ print(f'FP32 CPU inference latency: {(fp32_inf_latency * 1000):.3f} ms / sample'
 int8_inf_latency = helper.measure_inference_latency(
   model=qtz_model, 
   device=qtz_device, 
-  input_size=(1,3,64,64), 
-  num_samples=50
+  input_size=inf_size,
+  num_samples=num_samples
 )
 print(f'INT8 CPU inference latency: {(int8_inf_latency * 1000):.3f} ms / sample')
