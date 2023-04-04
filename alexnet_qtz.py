@@ -34,14 +34,14 @@ train_loader, test_loader = datasets.prepare_imagenet_loaders(
 print('Done')
 print('')
 
-# load Alexnet model (pretrained by CIFAR10)
+# load Alexnet model
 model_dir = './models/'
-#fp32_model_name = 'alexnet_cifar10.pt'
-#fp32_model_path = os.path.join(model_dir, fp32_model_name)
+fp32_model_name = 'alexnet_cifar10.pt'
+fp32_model_path = os.path.join(model_dir, fp32_model_name)
 #print(f'Loading FP32 model from {fp32_model_path} ...')
 
-#fp32_model = helper.load_model(fp32_model_path)
-fp32_model = alexnet_utils.create_alexnet_model()
+fp32_model = helper.load_model(fp32_model_path)
+#fp32_model = alexnet_utils.create_alexnet_model()
 
 fp32_model.to(device)
 print(fp32_model)
@@ -101,7 +101,7 @@ print(f'Model accuracy: {eval_accuracy}\n')
 save_model = False
 
 if save_model:
-    prefix = f'alexnet_imagenet_qtz_acc{int(eval_accuracy*100)}'
+    prefix = f'alexnet_cifar10_qtz_acc{int(eval_accuracy*100)}'
 
     params_dir = 'params/'
     if not os.path.exists(params_dir):
