@@ -16,15 +16,15 @@ helper.set_random_seeds(random_seed=random_seed)
 # prepare CIFAR100 dataset --------------------------------------------
 print('Preparing CIFAR100 dataset ...')
 
-train_batch_size = 4
+train_batch_size = 100
 eval_batch_size = 1
 transform = alexnet_utils.use_alexnet_transform()
 
 train_loader, test_loader = datasets.prepare_cifar100_loaders(
-  data_transform=transform,
-  train_batch_size=train_batch_size,
-  eval_batch_size=eval_batch_size
-)
+    data_transform=transform,
+    train_batch_size=train_batch_size,
+    eval_batch_size=eval_batch_size
+    )
 
 print('Done')
 print('')
@@ -68,23 +68,28 @@ print('')
 print('Start evaluation ...')
 
 topk = (1, 5)
-_, top1_acc, top5_acc = helper.evaluate_model_topk(model, test_loader, device, topk=topk)
+with torch.no_grad():
+    _, top1_acc, top5_acc = helper.evaluate_model_topk(
+        model, test_loader, device, topk=topk
+        )
 
-print(f'Top 1 accuracy: {top1_acc:.3f}')
-print(f'Top 5 accuracy: {top5_acc:.3f}')
+print(f'Top 1 accuracy: {top1_acc:.5f}')
+print(f'Top 5 accuracy: {top5_acc:.5f}')
 print('')
 
 # save model ---------------------------------------------------------
 save_model = False
-model_dir = './models/'
-model_name = f'alexnet_cifar100_{int(top1_acc * 100)}.pt'
-model_path = os.path.join(model_dir, model_name)
-if not os.path.exists(model_dir):
-  os.makedirs(model_dir)
 
 if save_model:
-  helper.save_model(model, model_path)
-  print(f'Model saved at {model_path}')
-  print('')
+    model_name = f'alexnet_cifar100_acc{int(top1_acc * 100)}.pt'
+
+    model_path = os.path.join(model_dir, model_name)
+    model_dir = './models/'
+    if not os.path.exists(model_dir):
+      os.makedirs(model_dir)
+
+    helper.save_model(model, model_path)
+    print(f'Model saved at {model_path}')
+    print('')
 
 # end
