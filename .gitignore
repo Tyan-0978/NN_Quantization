@@ -7,8 +7,9 @@ data/
 # test files
 _test/
 
-# Python cache
+# Python
 __pycache__/
+env/
 
 # vim swap files
 *.swp
