@@ -53,12 +53,15 @@ dataset_size = 50000
 num_per_cat = 50
 data_offset = 0
 
-#data_indices = [i + data_offset * num_data for i in range(num_data)]
-data_indices = [i for i in range(data_offset, dataset_size, num_per_cat)]
+data_indices_1 = [i for i in range(data_offset, dataset_size, num_per_cat)]
+
+num_data = 10000
+data_offset = 0
+data_indices_2 = [i + data_offset for i in range(num_data)]
 
 transform = alexnet_utils.use_alexnet_transform()
 test_set = datasets.ImageNet(root="./data", split='val', transform=transform)
-test_subset = Subset(test_set, data_indices)
+test_subset = Subset(test_set, data_indices_2)
 test_loader = DataLoader(test_subset)
 
 '''
