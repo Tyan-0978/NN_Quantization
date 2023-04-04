@@ -16,12 +16,20 @@ from utils import alexnet_utils
 from utils import psum
 
 
-# set partial sum parameters
-psum_bits = 32
-psum_num_ops = 2
-
-# create custom AlexNet model
+# create models
+# original AlexNet model
 model = alexnet_utils.create_alexnet_model()
+
+# quantized AlexNet model
+model_dir = 'models/'
+qtz_model_name = 'alexnet_imagenet_qtz_acc53_model.pt'
+qtz_model_path = os.path.join(model_dir, qtz_model_name)
+qtz_model = helper.load_torchscript_model(qtz_model_path)
+
+# psum customized AlexNet model
+psum_bits = 32
+psum_num_ops = 36
+
 custom_model = psum.CustomAlexnet(
     ref_model=model,
     psum_bits=psum_bits,
@@ -30,7 +38,7 @@ custom_model = psum.CustomAlexnet(
 
 # load quantization parameters and setup custom model
 params_dir = 'params/'
-params_name = 'alexnet_imagenet_qtz_histogram_acc53_params.pkl'
+params_name = 'alexnet_imagenet_qtz_acc53_params.pkl'
 params_path = os.path.join(params_dir, params_name)
 
 with open(params_path, 'rb') as file:
@@ -41,11 +49,16 @@ custom_model.customize(params)
 #print(custom_model)
 
 # dataset
-num_data = 10
+dataset_size = 50000
+num_per_cat = 50
+data_offset = 0
+
+#data_indices = [i + data_offset * num_data for i in range(num_data)]
+data_indices = [i for i in range(data_offset, dataset_size, num_per_cat)]
 
 transform = alexnet_utils.use_alexnet_transform()
 test_set = datasets.ImageNet(root="./data", split='val', transform=transform)
-test_subset = Subset(test_set, list(range(num_data)))
+test_subset = Subset(test_set, data_indices)
 test_loader = DataLoader(test_subset)
 
 '''
@@ -64,11 +77,19 @@ with torch.no_grad():
         device=gpu_device,
         topk=topk,
         )
+    print(f'Original model accuracy: {fp32_top1:.5f} (top 1) / {fp32_top5:.5f} (top 5)')
+
+    _, qtz_top1, qtz_top5 = helper.evaluate_model_topk(
+        qtz_model, test_loader,
+        device=cpu_device,
+        topk=topk,
+        )
+    print(f'Quantized model accuracy: {qtz_top1:.5f} (top 1) / {qtz_top5:.5f} (top 5)')
+
     _, custom_top1, custom_top5 = helper.evaluate_model_topk(
         custom_model, test_loader,
         device=cpu_device,
         topk=topk,
         )
+    print(f'Custom model accuracy: {custom_top1:.5f} (top 1) / {custom_top5:.5f} (top 5)')
 
-print(f'Original model accuracy: {fp32_top1:.5f} (top 1) / {fp32_top5:.5f} (top 5)')
-print(f'Custom model accuracy:   {fp32_top1:.5f} (top 1) / {fp32_top5:.5f} (top 5)')
