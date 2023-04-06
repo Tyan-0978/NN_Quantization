@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 
 import os
+import sys
 import pickle
 
 import torch
@@ -46,30 +47,30 @@ with open(params_path, 'rb') as file:
 
 custom_model.customize(params)
 
-#print(custom_model)
 
 # dataset
 dataset_size = 50000
 num_per_cat = 50
 data_offset = 0
-
 data_indices_1 = [i for i in range(data_offset, dataset_size, num_per_cat)]
 
 num_data = 10000
-data_offset = 0
+data_offset = 40000
 data_indices_2 = [i + data_offset for i in range(num_data)]
+
+start = int(sys.argv[1]) - 1
+end = int(sys.argv[2])
+data_indices_3 = list(range(start, end))
+
+print(f'Data range: {data_indices_3[0]} - {data_indices_3[-1]}')
 
 transform = alexnet_utils.use_alexnet_transform()
 test_set = datasets.ImageNet(root="./data", split='val', transform=transform)
-test_subset = Subset(test_set, data_indices_2)
+test_subset = Subset(test_set, data_indices_3)
 test_loader = DataLoader(test_subset)
 
-'''
-for inputs, labels in tqdm(test_loader):
-    model_out = model(inputs)
-    custom_out = custom_model(inputs)
-'''
 
+# inference
 cpu_device = torch.device('cpu')
 gpu_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
