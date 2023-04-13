@@ -17,8 +17,9 @@ from utils import alexnet_utils
 from utils import psum
 
 
-if len(sys.argv) != 3:
-    print('Missing arguments; Please specify data range.')
+if len(sys.argv) != 5:
+    print(f'Missing arguments: Expecting 4 but get {len(sys.argv) - 1}')
+    print(f'Arguments: {sys.argv}')
     sys.exit()
 
 # create models
@@ -32,8 +33,8 @@ qtz_model_path = os.path.join(model_dir, qtz_model_name)
 qtz_model = helper.load_torchscript_model(qtz_model_path)
 
 # psum customized AlexNet model
-psum_bits = 20
-psum_num_ops = 36
+psum_bits = int(sys.argv[1])
+psum_num_ops = int(sys.argv[2])
 print(f'Psum bits: {psum_bits}')
 print(f'Number of operands: {psum_num_ops}')
 
@@ -60,8 +61,8 @@ test_set = datasets.ImageNet(root="./data", split='val', transform=transform)
 dataset_size = len(test_set)
 print(f'Size of dataset: {dataset_size}')
 
-start = int(sys.argv[1]) - 1
-end = int(sys.argv[2])
+start = int(sys.argv[3]) - 1
+end = int(sys.argv[4])
 data_indices = list(range(start, end))
 
 print(f'Dataset index range: {data_indices[0]} - {data_indices[-1]}')
@@ -107,11 +108,11 @@ with torch.no_grad():
         print('Custom model accuracy: ', end='')
         print(f'{custom_top1:.5f} (top 1) / {custom_top5:.5f} (top 5)')
 
-log_name = 'acc_log.txt'
+log_name = 'imagenet_acc.log'
 with open(log_name, 'a') as log_file:
     log_file.write(f'Psum bits: {psum_bits:2}  /  ')
     log_file.write(f'Number of operands: {psum_num_ops:3}  /  ')
-    log_file.write(f'Data range: {start} - {end}\n')
+    log_file.write(f'Data range: {start+1} - {end}\n')
     log_file.write(f'Accuracy: ')
     log_file.write(f'{custom_top1:.5f} (top 1) / {custom_top5:.5f} (top 5)\n')
     log_file.write('-' * 75 + '\n')
